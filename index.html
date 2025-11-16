@@ -60,7 +60,7 @@
   const bgm = new Audio('bgm.mp3');
   bgm.loop = true;
   bgm.volume = 0.35;
-  bgm.playsInline = true; // for iOS
+  bgm.playsInline = true; // iOS
 
   let jumpBuffer = null, gameoverBuffer = null;
 
@@ -113,12 +113,14 @@
   const fallback = document.createElement('canvas');
   fallback.width = 64; fallback.height = 64;
   const fctx = fallback.getContext('2d');
-  fctx.fillStyle = '#FFDD57'; fctx.fillRect(0,0,64,64); fctx.fillStyle='#222'; fctx.fillRect(40,10,10,10);
+  fctx.fillStyle = '#FFDD57'; fctx.fillRect(0,0,64,64); 
+  fctx.fillStyle='#222'; fctx.fillRect(40,10,10,10);
 
   const bird = { x:80, y:100, w:50, h:70, vy:0, gravity:0.45, jump:-8 };
   const pipeWidth = 70;
   let pipes = [], spawnTimer = 0, score = 0;
   let running = false, gameOver = false;
+  let bgmStarted = false; // ensure BGM starts only once
 
   function computeHitbox(){
     const scaleX = bird.w / imgWidth;
@@ -143,23 +145,27 @@
     else playAudioFallback('gameover.mp3');
   }
 
-  function startBgm(){ 
-    try {
-      bgm.currentTime=0;
-      const playPromise = bgm.play();
-      if(playPromise!==undefined) playPromise.catch(()=>{});
-    } catch(e){}
+  function startBgm(){
+    if(!bgmStarted){
+      try {
+        bgmStarted = true;
+        bgm.currentTime = 0;
+        bgm.play().catch(()=>{});
+      } catch(e){}
+    }
   }
+
   function stopBgm(){ bgm.pause(); bgm.currentTime=0; }
 
   function flap(){
-    if (gameOver) { restart(); return; }
+    if(gameOver){ restart(); return; }
+
     ensureAudioContext();
 
-    if (!running) {
+    if(!running){
       running = true;
       msgEl.style.display='none';
-      startBgm(); // BGM now starts on first tap
+      startBgm(); // BGM starts here synchronously on first tap
     }
 
     playJump();
@@ -168,7 +174,7 @@
 
   window.addEventListener('pointerdown', flap);
   window.addEventListener('touchstart', flap, {passive:false});
-  window.addEventListener('keydown', e => { if(e.code==='Space'||e.key===' ') { e.preventDefault(); flap(); } }, {passive:false});
+  window.addEventListener('keydown', e => { if(e.code==='Space'||e.key===' '){ e.preventDefault(); flap(); } }, {passive:false});
 
   function spawnPipe(){
     const gap = Math.max(110, Math.round(bird.h*1.6));
@@ -179,25 +185,25 @@
   }
 
   function update(){
-    if (!running || gameOver) return;
+    if(!running || gameOver) return;
     bird.vy += bird.gravity;
     bird.y += bird.vy;
 
     spawnTimer++;
-    if (spawnTimer > 90){ spawnPipe(); spawnTimer = 0; }
+    if(spawnTimer>90){ spawnPipe(); spawnTimer=0; }
 
-    for (let i=pipes.length-1;i>=0;i--){
+    for(let i=pipes.length-1;i>=0;i--){
       const p = pipes[i]; p.x -= 3;
-      if (!p.passed && p.x+pipeWidth < bird.x){ p.passed=true; score++; }
-      if (p.x < -pipeWidth) pipes.splice(i,1);
+      if(!p.passed && p.x+pipeWidth<bird.x){ p.passed=true; score++; }
+      if(p.x<-pipeWidth) pipes.splice(i,1);
     }
 
-    if (bird.y < -50 || bird.y+bird.h > canvas.height+50){ endGame(); return; }
+    if(bird.y<-50 || bird.y+bird.h>canvas.height+50){ endGame(); return; }
 
     const hb = computeHitbox();
-    for (const p of pipes){
-      const hit = hb.x < p.x+pipeWidth && hb.x+hb.w > p.x && (hb.y < p.top || hb.y+hb.h > p.bottom);
-      if (hit){ endGame(); return; }
+    for(const p of pipes){
+      const hit = hb.x<p.x+pipeWidth && hb.x+hb.w>p.x && (hb.y<p.top || hb.y+hb.h>p.bottom);
+      if(hit){ endGame(); return; }
     }
   }
 
@@ -206,47 +212,47 @@
     g.addColorStop(0,'#70c5ce'); g.addColorStop(1,'#4ec0ca');
     ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    ctx.fillStyle = '#2e8b34';
-    for (const p of pipes){
+    ctx.fillStyle='#2e8b34';
+    for(const p of pipes){
       ctx.fillRect(p.x,0,pipeWidth,p.top);
       ctx.fillRect(p.x,p.bottom,pipeWidth,canvas.height-p.bottom);
-      ctx.fillStyle = '#1f6f28';
+      ctx.fillStyle='#1f6f28';
       ctx.fillRect(p.x-4,p.top-8,pipeWidth+8,8);
       ctx.fillRect(p.x-4,p.bottom,pipeWidth+8,8);
-      ctx.fillStyle = '#2e8b34';
+      ctx.fillStyle='#2e8b34';
     }
 
-    if (userImgLoaded) ctx.drawImage(userImg, bird.x, bird.y, bird.w, bird.h);
-    else ctx.drawImage(fallback, bird.x, bird.y, bird.w, bird.h);
+    if(userImgLoaded) ctx.drawImage(userImg,bird.x,bird.y,bird.w,bird.h);
+    else ctx.drawImage(fallback,bird.x,bird.y,bird.w,bird.h);
 
     ctx.fillStyle='white';
     ctx.font = `${Math.floor(canvas.width*0.065)}px Arial`;
-    ctx.fillText('Score: '+score, 10, Math.floor(canvas.height*0.05));
+    ctx.fillText('Score: '+score,10,Math.floor(canvas.height*0.05));
   }
 
   function loop(){ update(); draw(); requestAnimationFrame(loop); }
 
   function endGame(){
-    gameOver = true; running = false;
+    gameOver=true; running=false;
     stopBgm();
     playGameOver();
     msgEl.style.display='block';
-    msgEl.innerHTML = `GAME OVER<br>Score: ${score}<br>Tap / Click to restart`;
+    msgEl.innerHTML=`GAME OVER<br>Score: ${score}<br>Tap / Click to restart`;
   }
 
   function restart(){
     bird.y = canvas.height/2 - bird.h/2;
-    bird.vy = 0;
-    pipes = []; spawnTimer = 0; score = 0;
-    running = false; gameOver = false;
+    bird.vy=0;
+    pipes=[]; spawnTimer=0; score=0;
+    running=false; gameOver=false;
     msgEl.style.display='block';
-    msgEl.innerHTML = 'Tap / Click / Space to start';
+    msgEl.innerHTML='Tap / Click / Space to start';
   }
 
   // responsive canvas
   function resizeCanvas(){
-    canvas.width = window.innerWidth * 0.95;
-    canvas.height = window.innerHeight * 0.95;
+    canvas.width = window.innerWidth*0.95;
+    canvas.height = window.innerHeight*0.95;
     bird.x = canvas.width*0.2;
     bird.w = canvas.width*0.18;
     bird.h = canvas.height*0.25;
@@ -258,18 +264,6 @@
   bird.y = canvas.height/2 - bird.h/2;
   requestAnimationFrame(loop);
 
-  // unlock audio globally on first gesture (optional)
-  function unlockAudio(){
-    ensureAudioContext();
-    if(audioCtx) audioCtx.resume().catch(()=>{});
-    try { bgm.play().catch(()=>{}); } catch(e){}
-    window.removeEventListener('pointerdown', unlockAudio);
-    window.removeEventListener('keydown', unlockAudio);
-    window.removeEventListener('touchstart', unlockAudio);
-  }
-  window.addEventListener('pointerdown', unlockAudio, {once:true});
-  window.addEventListener('keydown', unlockAudio, {once:true});
-  window.addEventListener('touchstart', unlockAudio, {once:true});
 })();
 </script>
 </body>
