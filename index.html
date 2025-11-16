@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>Flappy — Start & Restart with BGM</title>
+<title>Flappy — Bigger Bird & BGM</title>
 <style>
 html, body {
   height: 100%;
@@ -201,7 +201,7 @@ canvas {
     if(userImgLoaded) ctx.drawImage(userImg,bird.x,bird.y,bird.w,bird.h);
     else ctx.drawImage(fallback,bird.x,bird.y,bird.w,bird.h);
 
-    // draw score always on top-left corner
+    // draw score on top-left corner
     ctx.fillStyle='white';
     ctx.font=`${Math.floor(canvas.width*0.065)}px Arial`;
     ctx.fillText('Score: '+score, 10, Math.floor(canvas.height*0.05));
@@ -237,8 +237,8 @@ canvas {
     canvas.width = window.innerWidth*0.95;
     canvas.height = window.innerHeight*0.95;
     bird.x = canvas.width*0.2;
-    bird.w = canvas.width*0.18;
-    bird.h = canvas.height*0.25;
+    bird.w = canvas.width * 0.28;  // increased width
+    bird.h = canvas.height * 0.28; // increased height proportionally
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
