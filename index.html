@@ -52,7 +52,7 @@
       const C = window.AudioContext || window.webkitAudioContext;
       if (C) {
         audioCtx = new C();
-        audioCtx.resume().catch(() => {});
+        audioCtx.resume().catch(()=>{});
       }
     }
   }
@@ -143,20 +143,32 @@
     else playAudioFallback('gameover.mp3');
   }
 
-  function startBgm(){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
+  function startBgm(){ 
+    try {
+      bgm.currentTime=0;
+      const playPromise = bgm.play();
+      if(playPromise!==undefined) playPromise.catch(()=>{});
+    } catch(e){}
+  }
   function stopBgm(){ bgm.pause(); bgm.currentTime=0; }
 
   function flap(){
     if (gameOver) { restart(); return; }
     ensureAudioContext();
-    if (!running) { running = true; msgEl.style.display='none'; startBgm(); }
+
+    if (!running) {
+      running = true;
+      msgEl.style.display='none';
+      startBgm(); // BGM now starts on first tap
+    }
+
     playJump();
     bird.vy = bird.jump;
   }
 
   window.addEventListener('pointerdown', flap);
   window.addEventListener('touchstart', flap, {passive:false});
-  window.addEventListener('keydown', e => { if (e.code==='Space'||e.key===' ') { e.preventDefault(); flap(); } }, {passive:false});
+  window.addEventListener('keydown', e => { if(e.code==='Space'||e.key===' ') { e.preventDefault(); flap(); } }, {passive:false});
 
   function spawnPipe(){
     const gap = Math.max(110, Math.round(bird.h*1.6));
@@ -246,10 +258,11 @@
   bird.y = canvas.height/2 - bird.h/2;
   requestAnimationFrame(loop);
 
-  // unlock audio on first gesture
+  // unlock audio globally on first gesture (optional)
   function unlockAudio(){
     ensureAudioContext();
     if(audioCtx) audioCtx.resume().catch(()=>{});
+    try { bgm.play().catch(()=>{}); } catch(e){}
     window.removeEventListener('pointerdown', unlockAudio);
     window.removeEventListener('keydown', unlockAudio);
     window.removeEventListener('touchstart', unlockAudio);
