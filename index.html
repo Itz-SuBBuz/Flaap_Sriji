@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>Flappy — Mobile Compatible</title>
+<title>Flappy — Mobile Compatible with Start Button</title>
 <style>
 html, body {
   height: 100%;
@@ -73,12 +73,6 @@ canvas {
   bgm.loop = true;
   bgm.volume = 0.35;
   bgm.playsInline = true;
-  let bgmStarted = false;
-
-  function stopBgm(){ 
-    bgm.pause(); 
-    bgmStarted = false; 
-  }
 
   let jumpBuffer=null, gameoverBuffer=null;
 
@@ -118,6 +112,13 @@ canvas {
     else new Audio('gameover.mp3').play().catch(()=>{});
   }
 
+  function startBgm(){
+    bgm.currentTime = 0;
+    bgm.play().catch(e=>console.warn('BGM play rejected',e));
+  }
+
+  function stopBgm(){ bgm.pause(); }
+
   // -------- Game Setup --------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -142,7 +143,6 @@ canvas {
   const pipeWidth=70;
   let pipes=[], spawnTimer=0, score=0;
   let running=false, gameOver=false;
-  let gameStartedOnce=false;
 
   function computeHitbox(){
     const scaleX = bird.w / imgWidth;
@@ -156,9 +156,14 @@ canvas {
   }
 
   function flap(){
-    if(gameOver){ restart(); return; }
+    if(gameOver){ return; } // do nothing, startBtn will handle restart
     ensureAudioContext();
-    if(!running){ running=true; msgEl.style.display='none'; }
+    if(!running){
+      running=true;
+      msgEl.style.display='none';
+      startBtn.style.display='none';
+      startBgm();
+    }
     playJump();
     bird.vy = bird.jump;
   }
@@ -218,7 +223,9 @@ canvas {
     stopBgm();
     playGameOver();
     msgEl.style.display='block';
-    msgEl.innerHTML=`GAME OVER<br>Score: ${score}<br>Tap / Click / Space to restart`;
+    msgEl.innerHTML=`GAME OVER<br>Score: ${score}`;
+    startBtn.style.display='block';
+    startBtn.innerText='Restart Game';
   }
 
   function restart(){
@@ -227,22 +234,21 @@ canvas {
     pipes=[]; spawnTimer=0; score=0;
     running=false; gameOver=false;
     msgEl.style.display='block';
-    msgEl.innerHTML='Click / Tap / Space to start';
+    msgEl.innerHTML='Click / Tap / Space or Start Button to play';
+    startBtn.style.display='block';
+    startBtn.innerText='Start Game';
   }
 
-  // Start button directly triggers BGM
+  // Start/Restart button directly triggers BGM
   startBtn.addEventListener('click', () => {
-    if(gameStartedOnce) return;
-    gameStartedOnce=true;
-    startBtn.style.display='none';
     running=true;
+    gameOver=false;
     msgEl.style.display='none';
-
-    // Start BGM from direct user gesture
-    bgm.currentTime=0;
-    bgm.play().catch(e=>console.warn('BGM play rejected', e));
-
-    ensureAudioContext();
+    startBtn.style.display='none';
+    bird.y = canvas.height/2 - bird.h/2;
+    bird.vy = 0;
+    pipes=[]; spawnTimer=0; score=0;
+    startBgm();
   });
 
   // Flap input
