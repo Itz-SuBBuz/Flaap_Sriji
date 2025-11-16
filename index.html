@@ -5,50 +5,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <title>Flappy — Mobile Compatible</title>
 <style>
-  html, body {
-    height: 100%;
-    margin: 0;
-    background: linear-gradient(#70c5ce, #4ec0ca);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: Arial;
-    touch-action: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #wrap {
-    position: relative;
-  }
-  canvas {
-    display: block;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.25);
-  }
-  #msg {
-    position: absolute;
-    width: 100%;
-    text-align: center;
-    top: 46%;
-    transform: translateY(-50%);
-    color: #fff;
-    font-size: 22px;
-    text-shadow: 0 2px 6px rgba(0,0,0,.5);
-    pointer-events: none;
-  }
-  #startBtn {
-    position: absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    padding:12px 24px;
-    font-size:22px;
-    border:none;
-    border-radius:8px;
-    background:#ffdd57;
-    color:#222;
-    cursor:pointer;
-    box-shadow:0 4px 12px rgba(0,0,0,.3);
-  }
+html, body {
+  height: 100%;
+  margin: 0;
+  background: linear-gradient(#70c5ce, #4ec0ca);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#wrap {
+  position: relative;
+}
+canvas {
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+#msg {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: 46%;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 22px;
+  text-shadow: 0 2px 6px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+#startBtn {
+  position: absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  padding:12px 24px;
+  font-size:22px;
+  border:none;
+  border-radius:8px;
+  background:#ffdd57;
+  color:#222;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,.3);
+}
 </style>
 </head>
 <body>
@@ -74,16 +74,6 @@
   bgm.volume = 0.35;
   bgm.playsInline = true;
   let bgmStarted = false;
-
-  async function startBgm(){
-    if(bgmStarted) return;
-    bgmStarted = true;
-    ensureAudioContext();
-    if(audioCtx && audioCtx.state==='suspended'){
-      try { await audioCtx.resume(); } catch(e){ console.warn(e); }
-    }
-    try { bgm.currentTime=0; await bgm.play(); } catch(e){ console.warn('BGM play failed', e); }
-  }
 
   function stopBgm(){ 
     bgm.pause(); 
@@ -168,7 +158,7 @@
   function flap(){
     if(gameOver){ restart(); return; }
     ensureAudioContext();
-    if(!running){ running=true; msgEl.style.display='none'; startBgm(); }
+    if(!running){ running=true; msgEl.style.display='none'; }
     playJump();
     bird.vy = bird.jump;
   }
@@ -240,28 +230,24 @@
     msgEl.innerHTML='Click / Tap / Space to start';
   }
 
-  async function startGameOnce(){
-    if(!gameStartedOnce){
-      startBtn.style.display='none';
-      gameStartedOnce=true;
-    }
+  // Start button directly triggers BGM
+  startBtn.addEventListener('click', () => {
+    if(gameStartedOnce) return;
+    gameStartedOnce=true;
+    startBtn.style.display='none';
     running=true;
     msgEl.style.display='none';
-    await startBgm();
-  }
 
-  startBtn.addEventListener('click', async () => { ensureAudioContext(); startGameOnce(); });
-  window.addEventListener('pointerdown', async e => {
-    if(!running && !gameStartedOnce){ ensureAudioContext(); await startGameOnce(); } 
-    else flap();
+    // Start BGM from direct user gesture
+    bgm.currentTime=0;
+    bgm.play().catch(e=>console.warn('BGM play rejected', e));
+
+    ensureAudioContext();
   });
-  window.addEventListener('keydown', async e => {
-    if(e.code==='Space'||e.key===' '){
-      e.preventDefault();
-      if(!running && !gameStartedOnce){ ensureAudioContext(); await startGameOnce(); }
-      else flap();
-    }
-  });
+
+  // Flap input
+  window.addEventListener('pointerdown', flap);
+  window.addEventListener('keydown', e => { if(e.code==='Space'||e.key===' '){ e.preventDefault(); flap(); } });
 
   // Responsive canvas
   function resizeCanvas(){
