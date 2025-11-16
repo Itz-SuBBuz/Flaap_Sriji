@@ -65,30 +65,31 @@
   function ensureAudioContext(){
     if(!audioCtx){
       const C = window.AudioContext || window.webkitAudioContext;
-      if(C){ audioCtx = new C(); audioCtx.resume().catch(()=>{}); }
+      if(C){ audioCtx = new C(); }
     }
   }
 
-  // Background music
   const bgm = new Audio('bgm.mp3');
   bgm.loop = true;
   bgm.volume = 0.35;
-  bgm.playsInline = true; 
+  bgm.playsInline = true;
   let bgmStarted = false;
 
-  function startBgm(){
-    if(!bgmStarted){
-      bgmStarted = true;
-      const playPromise = bgm.play();
-      if(playPromise!==undefined) playPromise.catch(()=>{});
+  async function startBgm(){
+    if(bgmStarted) return;
+    bgmStarted = true;
+    ensureAudioContext();
+    if(audioCtx && audioCtx.state==='suspended'){
+      try { await audioCtx.resume(); } catch(e){ console.warn(e); }
     }
-  }
-  function stopBgm(){
-    bgm.pause();
-    bgmStarted = false;
+    try { bgm.currentTime=0; await bgm.play(); } catch(e){ console.warn('BGM play failed', e); }
   }
 
-  // Jump and game over sounds
+  function stopBgm(){ 
+    bgm.pause(); 
+    bgmStarted = false; 
+  }
+
   let jumpBuffer=null, gameoverBuffer=null;
 
   async function loadAudioBuffer(url){
@@ -151,7 +152,7 @@
   const pipeWidth=70;
   let pipes=[], spawnTimer=0, score=0;
   let running=false, gameOver=false;
-  let gameStartedOnce=false; // track first start
+  let gameStartedOnce=false;
 
   function computeHitbox(){
     const scaleX = bird.w / imgWidth;
@@ -239,24 +240,27 @@
     msgEl.innerHTML='Click / Tap / Space to start';
   }
 
-  function startGameOnce(){
+  async function startGameOnce(){
     if(!gameStartedOnce){
       startBtn.style.display='none';
       gameStartedOnce=true;
     }
     running=true;
     msgEl.style.display='none';
-    startBgm();
+    await startBgm();
   }
 
-  startBtn.addEventListener('click', () => { ensureAudioContext(); startGameOnce(); });
-  window.addEventListener('pointerdown', e => {
-    if(!running && !gameStartedOnce){ ensureAudioContext(); startGameOnce(); } 
+  startBtn.addEventListener('click', async () => { ensureAudioContext(); startGameOnce(); });
+  window.addEventListener('pointerdown', async e => {
+    if(!running && !gameStartedOnce){ ensureAudioContext(); await startGameOnce(); } 
     else flap();
   });
-  window.addEventListener('keydown', e => {
-    if((e.code==='Space'||e.key===' ') && !running && !gameStartedOnce){ e.preventDefault(); ensureAudioContext(); startGameOnce(); }
-    else if((e.code==='Space'||e.key===' ') && running){ e.preventDefault(); flap(); }
+  window.addEventListener('keydown', async e => {
+    if(e.code==='Space'||e.key===' '){
+      e.preventDefault();
+      if(!running && !gameStartedOnce){ ensureAudioContext(); await startGameOnce(); }
+      else flap();
+    }
   });
 
   // Responsive canvas
