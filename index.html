@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>Flappy — Mobile Compatible with Start Button</title>
+<title>Flappy — Start & Restart with BGM</title>
 <style>
 html, body {
   height: 100%;
@@ -18,43 +18,49 @@ html, body {
 }
 #wrap {
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 canvas {
   display: block;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  width: 100%;
+  height: 100%;
 }
 #msg {
   position: absolute;
   width: 100%;
   text-align: center;
-  top: 46%;
+  top: 50%;
   transform: translateY(-50%);
   color: #fff;
   font-size: 22px;
   text-shadow: 0 2px 6px rgba(0,0,0,.5);
   pointer-events: none;
+  z-index: 500;
 }
 #startBtn {
   position: absolute;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  padding:12px 24px;
-  font-size:22px;
+  padding:16px 28px;
+  font-size:24px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#ffdd57;
   color:#222;
   cursor:pointer;
   box-shadow:0 4px 12px rgba(0,0,0,.3);
+  z-index:1000;
 }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
-  <div id="msg">Click / Tap / Space to start</div>
+  <div id="msg"></div>
   <button id="startBtn">Start Game</button>
 </div>
 
@@ -100,23 +106,10 @@ canvas {
     return true;
   }
 
-  function playJump(){
-    ensureAudioContext();
-    if(jumpBuffer) playBuffer(jumpBuffer,0.95);
-    else new Audio('jump.mp3').play().catch(()=>{});
-  }
+  function playJump(){ ensureAudioContext(); if(jumpBuffer) playBuffer(jumpBuffer,0.95); else new Audio('jump.mp3').play().catch(()=>{}); }
+  function playGameOver(){ ensureAudioContext(); if(gameoverBuffer) playBuffer(gameoverBuffer,1); else new Audio('gameover.mp3').play().catch(()=>{}); }
 
-  function playGameOver(){
-    ensureAudioContext();
-    if(gameoverBuffer) playBuffer(gameoverBuffer,1);
-    else new Audio('gameover.mp3').play().catch(()=>{});
-  }
-
-  function startBgm(){
-    bgm.currentTime = 0;
-    bgm.play().catch(e=>console.warn('BGM play rejected',e));
-  }
-
+  function startBgm(){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
   function stopBgm(){ bgm.pause(); }
 
   // -------- Game Setup --------
@@ -147,22 +140,14 @@ canvas {
   function computeHitbox(){
     const scaleX = bird.w / imgWidth;
     const scaleY = bird.h / imgHeight;
-    return {
-      x: bird.x + imgBBox.left*scaleX,
-      y: bird.y + imgBBox.top*scaleY,
-      w: bird.w - (imgBBox.left+imgBBox.right)*scaleX,
-      h: bird.h - (imgBBox.top+imgBBox.bottom)*scaleY
-    };
+    return { x: bird.x + imgBBox.left*scaleX, y: bird.y + imgBBox.top*scaleY, w: bird.w-(imgBBox.left+imgBBox.right)*scaleX, h: bird.h-(imgBBox.top+imgBBox.bottom)*scaleY };
   }
 
   function flap(){
-    if(gameOver){ return; } // do nothing, startBtn will handle restart
+    if(gameOver){ return; }
     ensureAudioContext();
     if(!running){
-      running=true;
-      msgEl.style.display='none';
-      startBtn.style.display='none';
-      startBgm();
+      running=true; msgEl.style.display='none'; startBtn.style.display='none'; startBgm();
     }
     playJump();
     bird.vy = bird.jump;
@@ -200,6 +185,8 @@ canvas {
     const g = ctx.createLinearGradient(0,0,0,canvas.height);
     g.addColorStop(0,'#70c5ce'); g.addColorStop(1,'#4ec0ca');
     ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // draw pipes
     ctx.fillStyle='#2e8b34';
     for(const p of pipes){
       ctx.fillRect(p.x,0,pipeWidth,p.top);
@@ -209,11 +196,15 @@ canvas {
       ctx.fillRect(p.x-4,p.bottom,pipeWidth+8,8);
       ctx.fillStyle='#2e8b34';
     }
+
+    // draw bird
     if(userImgLoaded) ctx.drawImage(userImg,bird.x,bird.y,bird.w,bird.h);
     else ctx.drawImage(fallback,bird.x,bird.y,bird.w,bird.h);
+
+    // draw score always on top-left corner
     ctx.fillStyle='white';
     ctx.font=`${Math.floor(canvas.width*0.065)}px Arial`;
-    ctx.fillText('Score: '+score,10,Math.floor(canvas.height*0.05));
+    ctx.fillText('Score: '+score, 10, Math.floor(canvas.height*0.05));
   }
 
   function loop(){ update(); draw(); requestAnimationFrame(loop); }
@@ -228,27 +219,13 @@ canvas {
     startBtn.innerText='Restart Game';
   }
 
-  function restart(){
-    bird.y=canvas.height/2 - bird.h/2;
-    bird.vy=0;
-    pipes=[]; spawnTimer=0; score=0;
-    running=false; gameOver=false;
-    msgEl.style.display='block';
-    msgEl.innerHTML='Click / Tap / Space or Start Button to play';
-    startBtn.style.display='block';
-    startBtn.innerText='Start Game';
-  }
-
-  // Start/Restart button directly triggers BGM
   startBtn.addEventListener('click', () => {
-    running=true;
-    gameOver=false;
-    msgEl.style.display='none';
-    startBtn.style.display='none';
+    running=true; gameOver=false;
+    msgEl.style.display='none'; startBtn.style.display='none';
     bird.y = canvas.height/2 - bird.h/2;
     bird.vy = 0;
     pipes=[]; spawnTimer=0; score=0;
-    startBgm();
+    startBgm(); // BGM starts whenever Start or Restart clicked
   });
 
   // Flap input
@@ -262,7 +239,6 @@ canvas {
     bird.x = canvas.width*0.2;
     bird.w = canvas.width*0.18;
     bird.h = canvas.height*0.25;
-    restart();
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
